@@ -27,37 +27,15 @@ management, prefer the `do` block syntax, which implicitly calls `destroy`.
 """
 type CuContext
     handle::CuContext_t
-
-    function CuContext(handle::CuContext_t)
-        handle == C_NULL && return new(C_NULL)
-
-        # we need unique context instances for garbage collection reasons
-        #
-        # refcounting the context handle doesn't work, because having multiple instances can
-        # cause the first instance (if without any use) getting gc'd before a new instance
-        # (eg. through getting the current context, _with_ actual uses) is created
-        #
-        # instead, we force unique instances, and keep a reference alive in a global dict.
-        # this prevents contexts from getting collected, requiring the user to destroy it.
-        return get!(context_instances, handle) do
-            obj = new(handle)
-            finalizer(obj, finalize)
-            return obj
-        end
-    end
 end
-const context_instances = Dict{CuContext_t,CuContext}()
+
+function Base.close(ctx::CuContext)
+    trace("Closing CuContext at $(Base.pointer_from_objref(ctx))")
+    @apicall(:cuCtxDestroy, (CuContext_t,), ctx)
+end
 
 function finalize(ctx::CuContext)
-    trace("Finalizing CuContext at $(Base.pointer_from_objref(ctx))")
-    if can_finalize(ctx)
-        @apicall(:cuCtxDestroy, (CuContext_t,), ctx)
-    else
-        # this is due to finalizers not respecting _any_ order during process teardown
-        # (ie. it doesn't respect active instances carefully set-up in `gc.jl`)
-        # TODO: can we check this only happens during teardown?
-        trace("Not destroying context $ctx because of out-of-order finalizer run")
-    end
+    close(ctx)
 end
 
 Base.unsafe_convert(::Type{CuContext_t}, ctx::CuContext) = ctx.handle
@@ -73,9 +51,7 @@ which have not been collected yet. The context will get freed as soon as all out
 instances have been finalized.
 """
 function destroy(ctx::CuContext)
-    delete!(context_instances, ctx.handle)
-    ctx = CuContext(C_NULL)
-    return
+    close(ctx)
 end
 
 Base.deepcopy_internal(::CuContext, ::ObjectIdDict) =
@@ -102,12 +78,10 @@ function CuContext(f::Function, args...)
     # NOTE: this could be implemented with context pushing and popping,
     #       but that functionality / our implementation of it hasn't been reliable
     old_ctx = CuCurrentContext()
-    ctx = CuContext(args...)    # implicitly activates
-    try
-        f(ctx)
-    finally
-        destroy(ctx)
-        activate(old_ctx)
+    scope() do
+      ctx = @! CuContext(args...)    # implicitly activates
+      @defer activate(old_ctx)
+      f(ctx)
     end
 end
 

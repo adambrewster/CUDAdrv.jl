@@ -1,6 +1,6 @@
 using CUDAdrv
 
-using Compat
+using Compat, Defer
 
 
 ## pointer
@@ -73,7 +73,7 @@ end
 CUDAdrv.vendor()
 
 dev = CuDevice(0)
-ctx = CuContext(dev, CUDAdrv.SCHED_BLOCKING_SYNC)
+ctx = @! CuContext(dev, CUDAdrv.SCHED_BLOCKING_SYNC)
 
 
 ## version
@@ -98,14 +98,12 @@ capability(dev)
 
 @test_throws ErrorException deepcopy(ctx)
 
-let ctx2 = CuContext(dev)
+@scope let ctx2 = @! CuContext(dev)
     @test ctx2 == CuCurrentContext()    # ctor implicitly pushes
     activate(ctx)
     @test ctx == CuCurrentContext()
 
     @test_throws ErrorException device(ctx2)
-
-    destroy(ctx2)
 end
 
 instances = length(CUDAdrv.context_instances)
@@ -480,6 +478,7 @@ end
 
 @cuprofile begin end
 
+pop_scope!(1)
 
 ## gc
 

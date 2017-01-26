@@ -15,16 +15,17 @@ type CuEvent
 
         ctx = CuCurrentContext()
         obj = new(handle_ref[], ctx)
-        block_finalizer(obj, ctx)
-        finalizer(obj, finalize)
         return obj
     end 
 end
 
-function finalize(e::CuEvent)
-    trace("Finalizing CuEvent at $(Base.pointer_from_objref(e))")
+function Base.close(e::CuEvent)
+    trace("Closing CuEvent at $(Base.pointer_from_objref(e))")
     @apicall(:cuEventDestroy, (CuEvent_t,), e)
-    unblock_finalizer(e, e.ctx)
+end
+
+function finalize(e::CuEvent)
+    close(e)
 end
 
 Base.unsafe_convert(::Type{CuEvent_t}, e::CuEvent) = e.handle

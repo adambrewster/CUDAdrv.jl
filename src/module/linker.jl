@@ -34,16 +34,17 @@ type CuLink
 
         ctx = CuCurrentContext()
         obj = new(handle_ref[], ctx, options, optionKeys, optionVals)
-        block_finalizer(obj, ctx)
-        finalizer(obj, finalize)
         return obj
     end
 end
 
-function finalize(link::CuLink)
-    trace("Finalizing CuLink at $(Base.pointer_from_objref(link))")
+function Base.close(link::CuLink)
+    trace("Close CuLink at $(Base.pointer_from_objref(link))")
     @apicall(:cuLinkDestroy, (CuLinkState_t,), link)
-    unblock_finalizer(link, link.ctx)
+end
+
+function finalize(link::CuLink)
+    close(link)
 end
 
 Base.unsafe_convert(::Type{CuLinkState_t}, link::CuLink) = link.handle

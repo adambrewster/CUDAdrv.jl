@@ -22,8 +22,6 @@ type CuArray{T,N} <: AbstractArray{T,N}
         devptr = Mem.alloc(T, len)
 
         obj = new(devptr, shape)
-        block_finalizer(obj, devptr.ctx)
-        finalizer(obj, finalize)
         return obj
     end
 
@@ -35,10 +33,13 @@ end
 (::Type{CuArray{T}}){T,N}(shape::NTuple{N,Int}) = CuArray{T,N}(shape)
 (::Type{CuArray{T}}){T}(len::Int)               = CuArray{T,1}((len,))
 
-function finalize(a::CuArray)
-    trace("Finalizing CuArray at $(Base.pointer_from_objref(a))")
+function Base.close(a::CuArray)
+    trace("Closing CuArray at $(Base.pointer_from_objref(a))")
     Mem.free(a.devptr)
-    unblock_finalizer(a, a.devptr.ctx)
+end
+
+function finalize(a::CuArray)
+    close(a)
 end
 
 Base.unsafe_convert{T}(::Type{DevicePtr{T}}, a::CuArray{T}) = a.devptr

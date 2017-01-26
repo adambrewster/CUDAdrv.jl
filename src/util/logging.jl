@@ -5,13 +5,8 @@ raw_println(msg::AbstractString...) = raw_print(msg..., "\n")
 
 # safe version of `Base.print_with_color`, switching to raw I/O before finalizers are run
 # (see `atexit` in `__init_logging__`)
-const after_exit = Ref{Bool}(false)
 function safe_print_with_color(color::Union{Int, Symbol}, io::IO, msg::AbstractString...)
-    if after_exit[]
-        raw_print(msg...)
-    else
-        print_with_color(color, io, msg...)
-    end
+    print_with_color(color, io, msg...)
 end
 
 const TRACE = haskey(ENV, "TRACE")
@@ -82,9 +77,4 @@ function __init_logging__()
         debug("CUDAdrv.jl is running in debug mode, this will generate additional output")
         debug("Run with TRACE=1 to enable even more output")
     end
-
-    atexit(()->begin
-        debug("Dropping down to post-finalizer I/O")
-        after_exit[]=true
-    end)
 end

@@ -2,7 +2,7 @@ __precompile__()
 
 module CUDAdrv
 
-using Compat
+using Compat, Defer
 import Compat.String
 
 include("util/logging.jl")
@@ -20,7 +20,6 @@ include("execution.jl")
 include("events.jl")
 include("profile.jl")
 
-include("gc.jl")
 include("array.jl")
 
 
