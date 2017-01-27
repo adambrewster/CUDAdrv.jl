@@ -94,7 +94,6 @@ capability(dev)
 ## context
 
 @test ctx == CuCurrentContext()
-@test ctx === CuCurrentContext()
 
 @test_throws ErrorException deepcopy(ctx)
 
@@ -106,13 +105,10 @@ capability(dev)
     @test_throws ErrorException device(ctx2)
 end
 
-instances = length(CUDAdrv.context_instances)
 CuContext(dev) do ctx2
-    @test length(CUDAdrv.context_instances) == instances+1
     @test ctx2 == CuCurrentContext()
     @test ctx != ctx2
 end
-@test length(CUDAdrv.context_instances) == instances
 @test ctx == CuCurrentContext()
 
 @test device(ctx) == dev
@@ -479,15 +475,3 @@ end
 @cuprofile begin end
 
 pop_scope!(1)
-
-## gc
-
-# force garbage collection (this makes finalizers run before STDOUT is destroyed)
-destroy(ctx)
-for i in 1:5
-    gc()
-end
-
-# test there's no outstanding contexts or consumers thereof
-@test length(CUDAdrv.finalizer_blocks) == 0
-@test length(CUDAdrv.context_instances) == 0
