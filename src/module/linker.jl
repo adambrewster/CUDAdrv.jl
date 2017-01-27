@@ -9,7 +9,6 @@ typealias CuLinkState_t Ptr{Void}
 
 type CuLink
     handle::CuLinkState_t
-    ctx::CuContext
 
     options::Dict{CUjit_option,Any}
     optionKeys::Vector{CUjit_option}
@@ -32,8 +31,7 @@ type CuLink
         @apicall(:cuLinkCreate, (Cuint, Ptr{CUjit_option}, Ptr{Ptr{Void}}, Ptr{CuLinkState_t}),
                                 length(optionKeys), optionKeys, optionVals, handle_ref)
 
-        ctx = CuCurrentContext()
-        obj = new(handle_ref[], ctx, options, optionKeys, optionVals)
+        obj = new(handle_ref[], options, optionKeys, optionVals)
         return obj
     end
 end

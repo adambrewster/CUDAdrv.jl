@@ -10,7 +10,6 @@ typealias CuModule_t Ptr{Void}
 
 type CuModule
     handle::CuModule_t
-    ctx::CuContext
 
     """
     Create a CUDA module from a string containing PTX code.
@@ -47,8 +46,7 @@ type CuModule
             end
         end
 
-        ctx = CuCurrentContext()
-        obj = new(handle_ref[], ctx)
+        obj = new(handle_ref[])
         return obj
     end
 end

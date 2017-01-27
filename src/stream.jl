@@ -8,7 +8,6 @@ typealias CuStream_t Ptr{Void}
 
 type CuStream
     handle::CuStream_t
-    ctx::CuContext
 end
 
 Base.unsafe_convert(::Type{CuStream_t}, s::CuStream) = s.handle
@@ -20,9 +19,7 @@ function CuStream(flags::Integer=0)
     handle_ref = Ref{CuStream_t}()
     @apicall(:cuStreamCreate, (Ptr{CuStream_t}, Cuint),
                               handle_ref, flags)
-
-    ctx = CuCurrentContext()
-    obj = CuStream(handle_ref[], ctx)
+    obj = CuStream(handle_ref[])
     return obj
 end
 
@@ -35,6 +32,6 @@ function finalize(s::CuStream)
     close(s)
 end
 
-CuDefaultStream() = CuStream(convert(CuStream_t, C_NULL), CuContext(C_NULL))
+CuDefaultStream() = CuStream(convert(CuStream_t, C_NULL))
 
 synchronize(s::CuStream) = @apicall(:cuStreamSynchronize, (CuStream_t,), s)

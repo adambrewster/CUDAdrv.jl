@@ -7,14 +7,11 @@ typealias CuEvent_t Ptr{Void}
 
 type CuEvent
     handle::CuEvent_t
-    ctx::CuContext
 
     function CuEvent()
         handle_ref = Ref{CuEvent_t}()
         @apicall(:cuEventCreate, (Ptr{CuEvent_t}, Cuint), handle_ref, 0)
-
-        ctx = CuCurrentContext()
-        obj = new(handle_ref[], ctx)
+        obj = new(handle_ref[])
         return obj
     end 
 end
